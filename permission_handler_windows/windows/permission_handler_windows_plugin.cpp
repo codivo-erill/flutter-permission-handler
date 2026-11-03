@@ -62,6 +62,7 @@ class PermissionHandlerWindowsPlugin : public Plugin {
 
  private:
   void IsLocationServiceEnabled(std::unique_ptr<MethodResult<>> result);
+  void OpenAppSettings(std::unique_ptr<MethodResult<>> result);
   winrt::fire_and_forget IsBluetoothServiceEnabled(std::unique_ptr<MethodResult<>> result);
 
   winrt::Windows::Devices::Geolocation::Geolocator geolocator;
@@ -140,12 +141,22 @@ void PermissionHandlerWindowsPlugin::HandleMethodCall(
     }
 
     result->Success(requestResults);
-  } else if (methodName.compare("shouldShowRequestPermissionRationale") == 0
-          || methodName.compare("openAppSettings")) {
+  } else if (methodName.compare("shouldShowRequestPermissionRationale") == 0) {
     result->Success(EncodableValue(false));
+  } else if (methodName.compare("openAppSettings") == 0) {
+    OpenAppSettings(std::move(result));
   } else {
     result->NotImplemented();
   }
+}
+
+void PermissionHandlerWindowsPlugin::OpenAppSettings(std::unique_ptr<MethodResult<>> result) {
+  int status = static_cast<int>(reinterpret_cast<INT_PTR>(
+    ::ShellExecuteW(nullptr, L"open", L"ms-settings:privacy",
+    nullptr, nullptr, SW_SHOWNORMAL)));
+
+  // Per ::ShellExecuteW documentation, anything >32 indicates success.
+  result->Success(EncodableValue(status > 32));
 }
 
 void PermissionHandlerWindowsPlugin::IsLocationServiceEnabled(std::unique_ptr<MethodResult<>> result) {
